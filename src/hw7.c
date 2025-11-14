@@ -168,6 +168,8 @@ char* infix2postfix_sf(char *infix) {
             
             top--;
         } 
+
+        else if (c == ' ') continue;
         
         else {
             while (top >= 0 && prec(c) <= prec(stack[top])) 
@@ -188,6 +190,7 @@ char* infix2postfix_sf(char *infix) {
 
 matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
     char* postfix = infix2postfix_sf(expr);
+    printf("Postfix str: %s\n", postfix);
     int postfix_len = strlen(postfix);
     matrix_sf** stack = malloc(postfix_len * sizeof(matrix_sf*));
     int top = -1;
@@ -197,10 +200,13 @@ matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
 
     for (int i = 0; i < postfix_len; i++) {
         char c = postfix[i];
+        printf("Processing char %c (%x)\n", c, c);
         switch (c) {
             case '\'': 
                 operand1 = stack[top--];
+                printf("Popped %c from stack for transpose\n", operand1->name);
                 stack[++top] = transpose_mat_sf(operand1);
+                printf("Pushed transpose to stack\n");
                 
                 if (!isalpha(operand1->name)) free(operand1);
 
@@ -208,9 +214,11 @@ matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
                 break;
 
             case '*':
-                operand1 = stack[top--];
                 operand2 = stack[top--];
+                operand1 = stack[top--];
+                printf("Popped %c and %c from stack for multiplication\n", operand1->name, operand2->name);
                 stack[++top] = mult_mats_sf(operand1, operand2);
+                printf("Pushed product to stack\n");
 
                 if (!isalpha(operand1->name)) free(operand1);
                 if (!isalpha(operand2->name)) free(operand2);
@@ -221,7 +229,13 @@ matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
             case '+':
                 operand1 = stack[top--];
                 operand2 = stack[top--];
+                printf("Popped %c and %c from stack for addition\n", operand1->name, operand2->name);
                 stack[++top] = add_mats_sf(operand1, operand2);
+                printf("Pushed sum to stack\n");
+                printf("hey\n");
+
+                for (unsigned int j = 0; j < stack[top]->num_rows * stack[top]->num_cols; j++) printf("%d ", stack[top]->values[j]);
+                printf("\n");
 
                 if (!isalpha(operand1->name)) free(operand1);
                 if (!isalpha(operand2->name)) free(operand2);
@@ -232,13 +246,14 @@ matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
             default:
                 operand1 = find_bst_sf(c, root);
                 stack[++top] = operand1;
+                printf("Pushed matrix to stack\n");
                 break;
         }
     }
 
     matrix_sf* res = stack[0];
     free(stack);
-    free(expr);
+    free(postfix);
     return res;
 }
 
