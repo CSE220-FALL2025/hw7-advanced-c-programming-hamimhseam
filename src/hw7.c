@@ -102,7 +102,7 @@ matrix_sf* transpose_mat_sf(const matrix_sf *mat) {
 }
 
 matrix_sf* create_matrix_sf(char name, const char *expr) {
-    char* s = expr;
+    char *s = (char *)expr;
 
     int m = strtol(s, &s, 10);
     int n = strtol(s, &s, 10);
@@ -190,8 +190,6 @@ char* infix2postfix_sf(char *infix) {
 
 matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
     char* postfix = infix2postfix_sf(expr);
-    // printf("Postfix form expr: %s\n", postfix);
-    fflush(stdout);
     int postfix_len = strlen(postfix);
     matrix_sf** stack = malloc(postfix_len * sizeof(matrix_sf*));
     int top = -1;
@@ -204,11 +202,7 @@ matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
         switch (c) {
             case '\'': 
                 operand1 = stack[top--];
-                // printf("Popped %c from stack, size is now %d\n", operand1->name, top+1);
-                // fflush(stdout);
                 stack[++top] = transpose_mat_sf(operand1);
-                // printf("Pushed %c (transpose) to stack, size is now %d\n", stack[top]->name, top+1);
-                // fflush(stdout);
                 
                 if (!isalpha(operand1->name)) free(operand1);
 
@@ -217,14 +211,8 @@ matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
 
             case '*':
                 operand2 = stack[top--];
-                // printf("Popped %c from stack, size is now %d\n", operand2->name, top+1);
-                // fflush(stdout);
                 operand1 = stack[top--];
-                // printf("Popped %c from stack, size is now %d\n", operand1->name, top+1);
-                // fflush(stdout);
                 stack[++top] = mult_mats_sf(operand1, operand2);
-                // printf("Pushed %c (product) to stack, size is now %d\n", stack[top]->name, top+1);
-                // fflush(stdout);
 
                 if (!isalpha(operand1->name)) free(operand1);
                 if (!isalpha(operand2->name)) free(operand2);
@@ -234,55 +222,30 @@ matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
 
             case '+':
                 operand1 = stack[top--];
-                // printf("Popped %c from stack, size is now %d\n", operand1->name, top+1);
-                // fflush(stdout);
                 operand2 = stack[top--];
-                // printf("Popped %c from stack, size is now %d\n", operand2->name, top+1);
-                // fflush(stdout);
                 stack[++top] = add_mats_sf(operand1, operand2);
-                // printf("Pushed %c (sum) to stack, size is now %d\n", stack[top]->name, top+1);
-                // fflush(stdout);
 
                 if (!isalpha(operand1->name)) free(operand1);
                 if (!isalpha(operand2->name)) free(operand2);
 
                 stack[top]->name = '?';
-                // printf("Reached end of + case\n");
-                // fflush(stdout);
                 break;
 
             default:
-                // printf("Looking for %c in bst\n", c);
                 operand1 = find_bst_sf(c, root);
                 stack[++top] = operand1;
-                // printf("Pushed %c to stack, size is now %d\n", operand1->name, top+1);
-                // fflush(stdout);
                 break;
         }
     }
 
-    // printf("reached end of input\n");
-    fflush(stdout);
     matrix_sf* res = stack[0];
-    // printf("set res to top of stack, which has size %d, will set name to %c\n", top+1, name);
-    fflush(stdout);
-    // printf("current state of res: ");
-    // for (unsigned int i = 0; i < res->num_cols * res->num_rows; i++) {
-    //     printf("%d ", res->values[i]);
-    // }
-    // printf("\n");
-    fflush(stdout);
     res->name = name;
-    // printf("set name of res\n");
-    fflush(stdout);
     free(stack);
     free(postfix);
     return res;
 }
 
 matrix_sf *execute_script_sf(char *filename) {
-    // printf("Start of execution function\n");
-    fflush(stdout);
     char *str = NULL;
     FILE *file = fopen(filename, "r");
     size_t max_line_size = MAX_LINE_LEN; // defined in hw7.h
@@ -296,8 +259,6 @@ matrix_sf *execute_script_sf(char *filename) {
             s++;
 
         name = *s;
-        // printf("Constructing %c\n", name);
-        fflush(stdout);
 
         while (*s++ != '=') // iterate past the equals to the main expr
             ;
@@ -306,9 +267,6 @@ matrix_sf *execute_script_sf(char *filename) {
         strtol(s, &end, 10);
         if (s == end) mode = 1;
         else mode = 0;
-        
-        // printf("Mode is %s\n", mode ? "compute" : "create"); 
-        fflush(stdout);
 
         if (mode == 0) {
             root = insert_bst_sf(create_matrix_sf(name, s), root);
