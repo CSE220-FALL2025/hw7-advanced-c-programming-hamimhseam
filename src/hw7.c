@@ -190,7 +190,6 @@ char* infix2postfix_sf(char *infix) {
 
 matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
     char* postfix = infix2postfix_sf(expr);
-    printf("Postfix str: %s\n", postfix);
     int postfix_len = strlen(postfix);
     matrix_sf** stack = malloc(postfix_len * sizeof(matrix_sf*));
     int top = -1;
@@ -200,13 +199,10 @@ matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
 
     for (int i = 0; i < postfix_len; i++) {
         char c = postfix[i];
-        printf("Processing char %c (%x)\n", c, c);
         switch (c) {
             case '\'': 
                 operand1 = stack[top--];
-                printf("Popped %c from stack for transpose\n", operand1->name);
                 stack[++top] = transpose_mat_sf(operand1);
-                printf("Pushed transpose to stack\n");
                 
                 if (!isalpha(operand1->name)) free(operand1);
 
@@ -216,9 +212,7 @@ matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
             case '*':
                 operand2 = stack[top--];
                 operand1 = stack[top--];
-                printf("Popped %c and %c from stack for multiplication\n", operand1->name, operand2->name);
                 stack[++top] = mult_mats_sf(operand1, operand2);
-                printf("Pushed product to stack\n");
 
                 if (!isalpha(operand1->name)) free(operand1);
                 if (!isalpha(operand2->name)) free(operand2);
@@ -229,13 +223,7 @@ matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
             case '+':
                 operand1 = stack[top--];
                 operand2 = stack[top--];
-                printf("Popped %c and %c from stack for addition\n", operand1->name, operand2->name);
                 stack[++top] = add_mats_sf(operand1, operand2);
-                printf("Pushed sum to stack\n");
-                printf("hey\n");
-
-                for (unsigned int j = 0; j < stack[top]->num_rows * stack[top]->num_cols; j++) printf("%d ", stack[top]->values[j]);
-                printf("\n");
 
                 if (!isalpha(operand1->name)) free(operand1);
                 if (!isalpha(operand2->name)) free(operand2);
@@ -246,19 +234,60 @@ matrix_sf* evaluate_expr_sf(char name, char *expr, bst_sf *root) {
             default:
                 operand1 = find_bst_sf(c, root);
                 stack[++top] = operand1;
-                printf("Pushed matrix to stack\n");
                 break;
         }
     }
 
     matrix_sf* res = stack[0];
+    res->name = name;
     free(stack);
     free(postfix);
     return res;
 }
 
 matrix_sf *execute_script_sf(char *filename) {
-   return NULL;
+    char *str = NULL;
+    FILE *file = fopen(filename, "r");
+    size_t max_line_size = MAX_LINE_LEN; // defined in hw7.h
+    int mode = 0; // create mode
+    bst_sf* root = NULL;
+    char name;
+
+    while (getline(&str, &max_line_size, file) != -1) {
+        char *s = str;
+        while (*s == ' ') // iterate to name
+            s++;
+
+        name = *s;
+
+        while (*s++ != '=') // iterate past the equals to the main expr
+            ;
+
+        char* end = s;
+        strtol(s, &end, 10);
+        if (s == end) mode = 1; // compute mode
+        
+        // printf("Mode is %s\n", mode ? "compute" : "create");
+
+        if (mode == 0) {
+            root = insert_bst_sf(create_matrix_sf(name, s), root);
+        } else {
+            root = insert_bst_sf(evaluate_expr_sf(name, s, root), root);
+        }
+    }
+
+    matrix_sf *res = find_bst_sf(name, root);
+    int res_len = res->num_rows * res->num_cols;
+    matrix_sf* res_copy = malloc(sizeof(matrix_sf) + res_len * sizeof(int));
+
+    res_copy->num_rows = res->num_rows;
+    res_copy->num_cols = res->num_cols;
+    memcpy(res_copy->values, res->values, res_len * sizeof(int));
+
+    free_bst_sf(root);
+    fclose(file);
+    free(str);
+    return res_copy;
 }
 
 // This is a utility function used during testing. Feel free to adapt the code to implement some of
